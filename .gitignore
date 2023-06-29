@@ -1,1 +1,6 @@
-accountInfo.*
+AccountInfo.xlsx
+Account*.*
+AccountConfig.py
+*.pdf
+Ebook.*
+*.json

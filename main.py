@@ -38,19 +38,45 @@ def get_comments(blog_post_url):
 
 
 def extract_comments(soup):
-    # 댓글 부분을 찾습니다.
-    comment_area = soup.find('div', {'class': 'u_cbox_content_wrap'})
-    # 댓글 내용
-    comments = [comment.text for comment in comment_area.find_all('span', {'class': 'u_cbox_contents'})]
-    # 이름
-    nicks = [nick.text for nick in comment_area.find_all('span', {'class': 'u_cbox_nick'})]
-    # 작성 일자
-    dates = [date.text for date in comment_area.find_all('span', {'class': 'u_cbox_date'})]
+    comments = []
+    page_number = 1
+    prev_button = WebDriverWait(driver, 10).until(
+        EC.element_to_be_clickable((By.CSS_SELECTOR, f'a.u_cbox_page[data-param="{page_number}"]')))
+    prev_button.click()
 
-    return list(zip(nicks, comments, dates))  # 각각의 댓글 정보를 하나의 튜플로 묶어서 리스트로 반환합니다.
+    while True:
+        # 댓글 부분을 찾습니다.
+        comment_area = soup.find('div', {'class': 'u_cbox_content_wrap'})
 
+        if comment_area is None:
+            print('No comment area found')
+            return []
+
+        # 댓글 내용
+        comments += [comment.text for comment in comment_area.find_all('span', {'class': 'u_cbox_contents'})]
+        # 이름
+        nicks = [nick.text for nick in comment_area.find_all('span', {'class': 'u_cbox_nick'})]
+        # 작성 일자
+        dates = [date.text for date in comment_area.find_all('span', {'class': 'u_cbox_date'})]
+
+        comments += list(zip(nicks, comments, dates))  # 각각의 댓글 정보를 하나의 튜플로 묶어서 리스트로 반환합니다.
+
+        print(comments)
+
+
+        # 다음 댓글 페이지로 넘어가는 버튼을 찾습니다.
+        try:
+            page_number += 1
+            prev_button = WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.CSS_SELECTOR, f'a.u_cbox_page[data-param="{page_number}"]')))
+            prev_button.click()  # 이전 버튼 클릭
+            time.sleep(2)  # 페이지가 로드되기를 기다립니다.
+        except NoSuchElementException:
+            break  # 다음 페이지가 없다면 반복문을 종료합니다.
+
+    return comments
 
 def save_to_excel(comments):
+    print("comments", comments)
     # 데이터를 DataFrame으로 변환합니다.
     df = pd.DataFrame(comments, columns=['Name', 'Comment', 'Date'])
 
@@ -58,18 +84,6 @@ def save_to_excel(comments):
     df.to_excel('comments.xlsx', index=False)  # 'comments.xlsx'는 저장하려는 파일 이름입니다.
 
 
-import pickle
-
-
-import os
-import json
-
-import pyautogui
-from selenium import webdriver
-
-import os
-import json
-from selenium.common.exceptions import NoSuchElementException
 
 import os
 import json
@@ -125,7 +139,7 @@ driver = webdriver.Chrome(service=webdriver_service,options=options)
 
 
 login_naver()  # 로그인
-blog_post_url = 'https://blog.naver.com/windylung/223049315704'# 실제 블로그 포스트의 URL을 입력하세요.
+blog_post_url = 'https://blog.naver.com/gyeyang_gu/222589732297'
 soup = get_comments(blog_post_url)
 comments = extract_comments(soup)
 save_to_excel(comments)
